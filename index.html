@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sena - Ton prof d'anglais</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh; display: flex; justify-content: center; align-items: center;
+    padding: 10px;
+  }
+  .app {
+    width: 100%; max-width: 520px; height: 92vh; max-height: 800px;
+    background: #f8f9ff; border-radius: 24px;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.35);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .avatar {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; position: relative; flex-shrink: 0;
+  }
+  .avatar.speaking::after {
+    content: ''; position: absolute; inset: -4px;
+    border: 2px solid #fff; border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+  .header-info h1 { font-size: 17px; font-weight: 600; }
+  .header-info p { font-size: 12px; opacity: 0.9; }
+  .status-badge {
+    margin-left: auto; font-size: 11px; font-weight: 600;
+    background: rgba(255,255,255,0.22);
+    padding: 5px 10px; border-radius: 10px; white-space: nowrap;
+  }
+  .chat {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    scroll-behavior: smooth;
+  }
+  .message {
+    max-width: 88%; padding: 12px 15px; border-radius: 16px;
+    font-size: 14.5px; line-height: 1.5;
+    animation: fadeIn 0.3s ease; word-wrap: break-word;
+  }
+  .message.sena {
+    background: #fff; color: #333; align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.12);
+  }
+  .message.user {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+  }
+  .message.correction {
+    background: #fff8e1; color: #7a5900;
+    border-left: 4px solid #ffc107;
+    align-self: flex-start; font-size: 13.5px;
+    border-radius: 10px; max-width: 92%;
+  }
+  .message.correction b { color: #d97706; }
+  .message.typing {
+    display: flex; gap: 4px; padding: 14px 18px; align-items: center;
+  }
+  .message.typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #bbb; animation: bounce 1.4s infinite;
+  }
+  .message.typing span:nth-child(2) { animation-delay: 0.2s; }
+  .message.typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .input-area {
+    padding: 12px 14px; background: #fff;
+    border-top: 1px solid #eee;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .input-area input {
+    flex: 1; padding: 12px 16px;
+    border: 2px solid #e8e8f0; border-radius: 22px;
+    font-size: 14.5px; outline: none;
+    transition: border-color 0.2s; font-family: inherit;
+  }
+  .input-area input:focus { border-color: #667eea; }
+  .mic-btn, .send-btn {
+    width: 44px; height: 44px; border: none; border-radius: 50%;
+    color: white; font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s; flex-shrink: 0;
+  }
+  .mic-btn { background: #4caf50; }
+  .mic-btn.listening {
+    background: #f44336;
+    animation: micPulse 1s infinite;
+  }
+  @keyframes micPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(244,67,54,0.6); }
+    50% { box-shadow: 0 0 0 12px rgba(244,67,54,0); }
+  }
+  .send-btn { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .mic-btn:active, .send-btn:active { transform: scale(0.9); }
+  .chat::-webkit-scrollbar { width: 4px; }
+  .chat::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="avatar" id="avatar">👩‍🏫</div>
+    <div class="header-info">
+      <h1>Sena</h1>
+      <p id="statusText">Ton prof d'anglais</p>
+    </div>
+    <div class="status-badge" id="levelBadge">Niveau : Débutant</div>
+  </header>
+  <div class="chat" id="chat"></div>
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="Écris ou clique 🎤..." autocomplete="off">
+    <button class="mic-btn" id="micBtn" title="Parler">🎤</button>
+    <button class="send-btn" id="sendBtn" title="Envoyer">➤</button>
+  </div>
+</div>
+
+<script>
+// ============================================
+// AQ.Ab8RN6LGRP9ZdE6OftwuCUJ-mdv6us3_j6Rta_ntabTm44eb5Q
+// ============================================
+const API_KEY = "AQ.Ab8RN6LGRP9ZdE6OftwuCUJ-mdv6us3_j6Rta_ntabTm44eb5Q";
+
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="AQ.Ab8RN6LGRP9ZdE6OftwuCUJ-mdv6us3_j6Rta_ntabTm44eb5Q";
+
+// ============================================
+// ÉLÉMENTS DE LA PAGE
+// ============================================
+const chat = document.getElementById('chat');
+const input = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
+const avatar = document.getElementById('avatar');
+const statusText = document.getElementById('statusText');
+const levelBadge = document.getElementById('levelBadge');
+
+// ============================================
+// ÉTAT
+// ============================================
+let history = [];
+let userLevel = 0;
+const LEVELS = ["Débutant", "Débutant+", "Intermédiaire", "Intermédiaire+", "Avancé"];
+
+// ============================================
+// PROMPT SYSTÈME
+// ============================================
+const SYSTEM_PROMPT =
+  "Tu es Sena, une professeure d'anglais bienveillante, patiente et ludique pour un élève FRANCOPHONE DÉBUTANT.\n" +
+  "RÈGLES :\n" +
+  "1. Tu expliques en français, tu enseignes l'anglais.\n" +
+  "2. Tu commences par les bases : salutations, se présenter, chiffres.\n" +
+  "3. À CHAQUE réponse de l'élève, tu le corriges si besoin. Format : commence par '✏️ Petite correction : [erreur] → [correct]' puis 1 phrase d'explication simple, puis encourage.\n" +
+  "4. Tu poses UNE seule question à la fois, très simple.\n" +
+  "5. Tu donnes un exemple concret.\n" +
+  "6. Tu utilises des emojis.\n" +
+  "7. Maximum 4 phrases par message.\n" +
+  "8. Tu répètes, tu fais réviser.\n" +
+  "9. Si l'élève écrit en français, encourage-le à essayer en anglais.\n" +
+  "10. Célèbre chaque petite victoire.\n" +
+  "Commence par accueillir l'élève, te présenter en 1 phrase, et lui apprendre 'Hello'.";
+
+// ============================================
+// AFFICHAGE
+// ============================================
+function addMessage(text, sender, extraClass) {
+  const div = document.createElement('div');
+  div.className = 'message ' + sender + (extraClass ? ' ' + extraClass : '');
+  div.innerHTML = text.replace(/\n/g, '<br>');
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'message sena typing';
+  div.id = 'typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+// ============================================
+// VOIX
+// ============================================
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+
+  const cleanText = text
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[✏️🎉👋🌟💪😊👏🚀❤️☕💼😴🍳☀️🔢👉]/g, '')
+    .trim();
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+
+  const englishWords = (cleanText.match(/\b(hello|hi|name|how|are|you|fine|thank|good|morning|yes|no|my|is|am|the|to|of|and)\b/gi) || []).length;
+  const totalWords = cleanText.split(/\s+/).length || 1;
+  const isEnglish = englishWords / totalWords > 0.3;
+
+  utterance.lang = isEnglish ? 'en-US' : 'fr-FR';
+  utterance.rate = 0.9;
+  utterance.pitch = 1.1;
+
+  avatar.classList.add('speaking');
+  utterance.onend = function() { avatar.classList.remove('speaking'); };
+  utterance.onerror = function() { avatar.classList.remove('speaking'); };
+
+  speechSynthesis.speak(utterance);
+}
+
+// ============================================
+// MICRO
+// ============================================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = false;
+  recognition.continuous = false;
+
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    input.value = text;
+    handleSend();
+  };
+
+  recognition.onend = function() {
+    isListening = false;
+    micBtn.classList.remove('listening');
+    statusText.textContent = "Ton prof d'anglais";
+  };
+
+  recognition.onerror = function() {
+    isListening = false;
+    micBtn.classList.remove('listening');
+    statusText.textContent = "Ton prof d'anglais";
+  };
+}
+
+micBtn.addEventListener('click', function() {
+  if (!recognition) {
+    alert("Le micro n'est pas supporté. Utilise Chrome ou Edge.");
+    return;
+  }
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+  speechSynthesis.cancel();
+  isListening = true;
+  micBtn.classList.add('listening');
+  statusText.textContent = "🎤 Je t'écoute...";
+  try { recognition.start(); } catch (e) {}
+});
+
+// ============================================
+// ENVOI + RÉPONSE IA
+// ============================================
+async function handleSend() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage(text, 'user');
+  input.value = '';
+  history.push({ role: 'user', parts: [{ text: text }] });
+
+  showTyping();
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: history,
+        generationConfig: { temperature: 0.8, maxOutputTokens: 400 }
+      })
+    });
+
+    const data = await response.json();
+    hideTyping();
+
+    if (!data.candidates || !data.candidates[0]) {
+      addMessage("Oups, je n'ai pas pu répondre. Vérifie ta clé API. 🤔", 'sena');
+      return;
+    }
+
+    const reply = data.candidates[0].content.parts[0].text;
+
+    const correctionMatch = reply.match(/✏️\s*Petite correction\s*:[^\n]*/i);
+    let mainReply = reply;
+
+    if (correctionMatch) {
+      addMessage(correctionMatch[0], 'sena', 'correction');
+      mainReply = reply.replace(correctionMatch[0], '').trim();
+    }
+
+    if (mainReply) addMessage(mainReply, 'sena');
+    speak(reply);
+
+    history.push({ role: 'model', parts: [{ text: reply }] });
+
+    if (history.length % 12 === 0 && userLevel < LEVELS.length - 1) {
+      userLevel++;
+      levelBadge.textContent = "Niveau : " + LEVELS[userLevel];
+    }
+
+  } catch (err) {
+    hideTyping();
+    addMessage("Problème de connexion. Vérifie ta clé API et internet. 🔌", 'sena');
+    console.error(err);
+  }
+}
+
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleSend();
+});
+
+// ============================================
+// DÉMARRAGE
+// ============================================
+window.addEventListener('load', function() {
+  if (API_KEY === "COLLE_TA_CLE_ICI") {
+    addMessage("⚠️ <b>Attention :</b> colle d'abord ta clé API Gemini dans le code (ligne <code>const API_KEY</code>).<br><br>Va sur <b>aistudio.google.com/apikey</b> pour en créer une gratuitement.<br><br>⚠️ La clé doit commencer par <b>AIzaSy</b>.", 'sena');
+    return;
+  }
+
+  setTimeout(async function() {
+    showTyping();
+    history.push({ role: 'user', parts: [{ text: "Bonjour Sena ! Je suis prêt à apprendre l'anglais." }] });
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: history,
+          generationConfig: { temperature: 0.8, maxOutputTokens: 400 }
+        })
+      });
+      const data = await response.json();
+      hideTyping();
+      if (data.candidates && data.candidates[0]) {
+        const reply = data.candidates[0].content.parts[0].text;
+        addMessage(reply, 'sena');
+        speak(reply);
+        history.push({ role: 'model', parts: [{ text: reply }] });
+      } else {
+        addMessage("Bonjour ! 👋 Je suis Sena. Dis-moi <b>Hello</b> pour commencer !", 'sena');
+      }
+    } catch (e) {
+      hideTyping();
+      addMessage("Bonjour ! 👋 Je suis Sena. Dis-moi <b>Hello</b> pour commencer !", 'sena');
+      speak("Bonjour ! Je suis Sena. Dis-moi Hello pour commencer !");
+    }
+  }, 500);
+});
+</script>
+</body>
+</html>
